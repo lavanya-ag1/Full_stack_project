@@ -61,6 +61,13 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
+    // Check if account was created with Google OAuth (no password set)
+    if (!user.password) {
+      return res.status(400).json({
+        message: "This account was registered using Google. Please log in with Google.",
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid email or password" });
@@ -90,6 +97,33 @@ const login = async (req, res) => {
   }
 };
 
+// Google OAuth Callback Handler
+const googleCallback = (req, res) => {
+  try {
+    // Generate JWT token for the authenticated user
+    const token = jwt.sign(
+      { id: req.user._id, email: req.user.email },
+      process.env.JWT_SECRET || "mysecretkey",
+      { expiresIn: "1d" }
+    );
+
+    // Set JWT cookie
+    res.cookie("token", token, COOKIE_OPTIONS);
+
+    // Redirect user to frontend home
+    const frontendUrl = process.env.FRONTEND
+      ? process.env.FRONTEND.replace(/\/$/, "")
+      : "http://localhost:5173";
+    res.redirect(`${frontendUrl}/home`);
+  } catch (error) {
+    console.error("Google callback error:", error);
+    const frontendUrl = process.env.FRONTEND
+      ? process.env.FRONTEND.replace(/\/$/, "")
+      : "http://localhost:5173";
+    res.redirect(`${frontendUrl}/login?error=OAuthFailed`);
+  }
+};
+
 // Logout Controller
 const logout = (req, res) => {
   res.clearCookie("token", COOKIE_OPTIONS);
@@ -99,5 +133,6 @@ const logout = (req, res) => {
 module.exports = {
   signup,
   login,
+  googleCallback,
   logout,
 };

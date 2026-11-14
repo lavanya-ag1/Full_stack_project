@@ -105,7 +105,40 @@ function SignupForm() {
         </button>
       </form>
 
-      <div className="auth-footer">
+      {/* Google OAuth Option */}
+      <div style={{ textAlign: "center", margin: "15px 0", color: "#888", fontSize: "14px" }}>
+        or
+      </div>
+
+      <a href={`${backendUrl}/api/user/google`} style={{ textDecoration: "none" }}>
+        <button
+          type="button"
+          style={{
+            width: "100%",
+            padding: "10px",
+            backgroundColor: "#ffffff",
+            color: "#444",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+          }}
+        >
+          <img
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+            alt="Google"
+            style={{ width: "18px", height: "18px" }}
+          />
+          Continue with Google
+        </button>
+      </a>
+
+      <div className="auth-footer" style={{ marginTop: "15px" }}>
         Already have an account? <Link to="/login">Login here</Link>
       </div>
     </div>
@@ -113,4 +146,3 @@ function SignupForm() {
 }
 
 export default SignupForm;
-

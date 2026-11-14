@@ -3,16 +3,20 @@ const dotenv = require("dotenv");
 const path = require("path");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
+const passport = require("passport");
 const connectDB = require("./config/db");
-
-const userRouter = require("./routes/userRouter");
-const urlRouter = require("./routes/urlRouter");
 
 // Load environment variables from .env
 dotenv.config({ path: path.join(__dirname, ".env") });
 
 // Connect to Database
 connectDB();
+
+// Initialize Passport config
+require("./config/passport");
+
+const userRouter = require("./routes/userRouter");
+const urlRouter = require("./routes/urlRouter");
 
 const app = express();
 
@@ -27,6 +31,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use(passport.initialize());
 
 // Routes
 app.use("/api/user", userRouter);

@@ -5,42 +5,33 @@ const Url = require("../models/Url");
 const Analytics = require("../models/Analytics");
 const User = require("../models/User");
 
-// Helper to generate a random 6-character short code
+// Generate a random 6-character short code
 const generateRandomCode = () => {
   return Math.random().toString(36).substring(2, 8);
 };
 
-// Helper to parse simple browser and device from User-Agent
+// Simple helper to detect browser and device type from User-Agent
 const parseUserAgent = (userAgent = "") => {
   let browser = "Other";
-  if (/chrome|crios/i.test(userAgent) && !/edge|edg|opr/i.test(userAgent)) {
-    browser = "Chrome";
-  } else if (/safari/i.test(userAgent) && !/chrome|crios/i.test(userAgent)) {
-    browser = "Safari";
-  } else if (/firefox|fxios/i.test(userAgent)) {
-    browser = "Firefox";
-  } else if (/edg/i.test(userAgent)) {
-    browser = "Edge";
-  } else if (/opera|opr/i.test(userAgent)) {
-    browser = "Opera";
-  }
+  if (/chrome|crios/i.test(userAgent) && !/edge|edg|opr/i.test(userAgent)) browser = "Chrome";
+  else if (/safari/i.test(userAgent) && !/chrome|crios/i.test(userAgent)) browser = "Safari";
+  else if (/firefox|fxios/i.test(userAgent)) browser = "Firefox";
+  else if (/edg/i.test(userAgent)) browser = "Edge";
+  else if (/opera|opr/i.test(userAgent)) browser = "Opera";
 
   let device = "Desktop";
-  if (/tablet|ipad/i.test(userAgent)) {
-    device = "Tablet";
-  } else if (/mobile|iphone|android/i.test(userAgent)) {
-    device = "Mobile";
-  }
+  if (/tablet|ipad/i.test(userAgent)) device = "Tablet";
+  else if (/mobile|iphone|android/i.test(userAgent)) device = "Mobile";
 
   return { browser, device };
 };
 
-// Create Short URL Controller
+// 1. Create a new short URL
 const createShortUrl = async (req, res) => {
   try {
     const { originalUrl, customCode, expiresAt, isOneTime, password, enableRevenue } = req.body;
 
-    // 1. Validate original URL
+    // Validate original URL
     if (!originalUrl) {
       return res.status(400).json({ message: "Please provide an original URL" });
     }
@@ -50,20 +41,18 @@ const createShortUrl = async (req, res) => {
       formattedUrl = "https://" + formattedUrl;
     }
 
-    // 2. Determine short code (custom or auto-generated)
+    // Determine short code (use custom if provided, otherwise generate random)
     let shortCode = customCode ? customCode.trim() : generateRandomCode();
 
-    // Check if custom or generated short code already exists
     const existingUrl = await Url.findOne({ shortCode });
     if (existingUrl) {
       if (customCode) {
         return res.status(400).json({ message: "Custom short code is already in use" });
       }
-      // If auto-generated collision, generate a new one
       shortCode = generateRandomCode() + Math.floor(Math.random() * 10);
     }
 
-    // 3. Check if user is logged in via cookie/token (optional createdBy)
+    // Check if user is logged in via cookie/token (optional)
     let createdBy = null;
     const token = req.cookies?.token || req.headers?.authorization?.split(" ")[1];
     if (token) {
@@ -71,19 +60,18 @@ const createShortUrl = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || "mysecretkey");
         createdBy = decoded.id;
       } catch (err) {
-        // Token invalid or expired, continue as guest
         createdBy = null;
       }
     }
 
-    // 4. Handle optional password hashing
+    // Hash password if provided
     let hashedPassword = null;
     if (password && password.trim() !== "") {
       const salt = await bcrypt.genSalt(10);
       hashedPassword = await bcrypt.hash(password, salt);
     }
 
-    // 5. Build full short URL link (points to frontend /:id) & generate QR Code
+    // Build the full short URL and QR code
     const frontendUrl = process.env.FRONTEND
       ? process.env.FRONTEND.replace(/\/$/, "")
       : "http://localhost:5173";
@@ -93,10 +81,10 @@ const createShortUrl = async (req, res) => {
     try {
       qrCode = await QRCode.toDataURL(fullShortUrl);
     } catch (qrErr) {
-      console.error("QR Code generation failed:", qrErr.message);
+      console.error("QR Code generation error:", qrErr.message);
     }
 
-    // 6. Save URL to Database
+    // Save URL document in MongoDB
     const newUrl = await Url.create({
       originalUrl: formattedUrl,
       shortCode,
@@ -108,7 +96,7 @@ const createShortUrl = async (req, res) => {
       enableRevenue: Boolean(enableRevenue),
     });
 
-    // 7. Initialize Analytics entry for this URL
+    // Initialize analytics document for this URL
     await Analytics.create({
       urlId: newUrl._id,
       clicks: 0,
@@ -122,31 +110,30 @@ const createShortUrl = async (req, res) => {
       url: newUrl,
     });
   } catch (error) {
-    console.error("Error creating short URL:", error);
+    console.error("Create URL error:", error);
     res.status(500).json({ message: "Server error while creating short URL" });
   }
 };
 
-// Get Original URL & Track General Visit Analytics
+// 2. Get destination URL and record regular visit analytics
 const getUrlAndTrackAnalytics = async (req, res) => {
   try {
     const { shortCode } = req.params;
     const { password } = req.query;
 
-    // 1. Find URL in database
     const url = await Url.findOne({ shortCode });
     if (!url || !url.isActive) {
       return res.status(404).json({ message: "Short link not found or no longer active" });
     }
 
-    // 2. Check if link is expired
+    // Check expiration
     if (url.expiresAt && new Date() > new Date(url.expiresAt)) {
       url.isActive = false;
       await url.save();
       return res.status(410).json({ message: "This short link has expired" });
     }
 
-    // 3. Check password protection
+    // Check password protection
     if (url.password) {
       if (!password) {
         return res.status(200).json({
@@ -161,7 +148,7 @@ const getUrlAndTrackAnalytics = async (req, res) => {
       }
     }
 
-    // 4. Extract Analytics Information
+    // Extract visitor details for analytics
     const ipAddress =
       req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
       req.socket.remoteAddress ||
@@ -172,7 +159,7 @@ const getUrlAndTrackAnalytics = async (req, res) => {
     const { browser, device } = parseUserAgent(userAgent);
     const referrer = req.headers["referer"] || req.headers["referrer"] || "Direct";
 
-    // 5. Update Analytics: Increment general clicks and record visit history
+    // Increment click count and record visit history
     await Analytics.findOneAndUpdate(
       { urlId: url._id },
       {
@@ -190,24 +177,23 @@ const getUrlAndTrackAnalytics = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // 6. If it's a one-time link without revenue mode, deactivate immediately
+    // Deactivate one-time link if revenue mode is not enabled
     if (url.isOneTime && !url.enableRevenue) {
       url.isActive = false;
       await url.save();
     }
 
-    // 7. Return destination URL and whether revenue/ad interstitial is enabled
     res.status(200).json({
       originalUrl: url.originalUrl,
       enableRevenue: Boolean(url.enableRevenue),
     });
   } catch (error) {
-    console.error("Error retrieving URL and updating analytics:", error);
+    console.error("Get URL error:", error);
     res.status(500).json({ message: "Server error while processing link" });
   }
 };
 
-// Track Monetized Click (called ONLY when user completes countdown and clicks the final continue button)
+// 3. Record monetized click when user finishes 10s ad and clicks continue
 const trackMonetizedClick = async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -217,7 +203,7 @@ const trackMonetizedClick = async (req, res) => {
       return res.status(404).json({ message: "Short link not found" });
     }
 
-    // Only count as monetized click if revenue is actually enabled
+    // Increment monetized clicks and creator earnings
     if (url.enableRevenue) {
       await Analytics.findOneAndUpdate(
         { urlId: url._id },
@@ -225,7 +211,6 @@ const trackMonetizedClick = async (req, res) => {
         { upsert: true }
       );
 
-      // Add $0.01 earnings to the creator if creator exists
       if (url.createdBy) {
         await User.findByIdAndUpdate(url.createdBy, {
           $inc: { earnings: 0.01 },
@@ -233,7 +218,7 @@ const trackMonetizedClick = async (req, res) => {
       }
     }
 
-    // If it's a one-time link with revenue, deactivate now after completion
+    // Deactivate one-time link after final continue click
     if (url.isOneTime) {
       url.isActive = false;
       await url.save();
@@ -241,7 +226,7 @@ const trackMonetizedClick = async (req, res) => {
 
     res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Error recording monetized click:", error);
+    console.error("Monetized click error:", error);
     res.status(500).json({ message: "Server error recording monetized click" });
   }
 };
