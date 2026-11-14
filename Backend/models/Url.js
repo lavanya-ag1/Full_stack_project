@@ -35,6 +35,10 @@ const urlSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    enableRevenue: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -44,4 +48,3 @@ const urlSchema = new mongoose.Schema(
 const Url = mongoose.model("Url", urlSchema);
 
 module.exports = Url;
-

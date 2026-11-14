@@ -12,6 +12,10 @@ const analyticsSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  monetizedClicks: {
+    type: Number,
+    default: 0,
+  },
   visitHistory: [
     {
       clickedAt: {
@@ -38,4 +42,3 @@ const analyticsSchema = new mongoose.Schema({
 const Analytics = mongoose.model("Analytics", analyticsSchema);
 
 module.exports = Analytics;
-

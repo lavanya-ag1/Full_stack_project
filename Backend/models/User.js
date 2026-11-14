@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
     },
+    earnings: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -28,4 +32,3 @@ const userSchema = new mongoose.Schema(
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;
-

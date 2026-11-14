@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const QRCode = require("qrcode");
 const Url = require("../models/Url");
 const Analytics = require("../models/Analytics");
+const User = require("../models/User");
 
 // Helper to generate a random 6-character short code
 const generateRandomCode = () => {
@@ -37,7 +38,7 @@ const parseUserAgent = (userAgent = "") => {
 // Create Short URL Controller
 const createShortUrl = async (req, res) => {
   try {
-    const { originalUrl, customCode, expiresAt, isOneTime, password } = req.body;
+    const { originalUrl, customCode, expiresAt, isOneTime, password, enableRevenue } = req.body;
 
     // 1. Validate original URL
     if (!originalUrl) {
@@ -104,12 +105,14 @@ const createShortUrl = async (req, res) => {
       isOneTime: Boolean(isOneTime),
       password: hashedPassword,
       qrCode,
+      enableRevenue: Boolean(enableRevenue),
     });
 
     // 7. Initialize Analytics entry for this URL
     await Analytics.create({
       urlId: newUrl._id,
       clicks: 0,
+      monetizedClicks: 0,
       visitHistory: [],
     });
 
@@ -124,7 +127,7 @@ const createShortUrl = async (req, res) => {
   }
 };
 
-// Get Original URL & Track Analytics
+// Get Original URL & Track General Visit Analytics
 const getUrlAndTrackAnalytics = async (req, res) => {
   try {
     const { shortCode } = req.params;
@@ -169,7 +172,7 @@ const getUrlAndTrackAnalytics = async (req, res) => {
     const { browser, device } = parseUserAgent(userAgent);
     const referrer = req.headers["referer"] || req.headers["referrer"] || "Direct";
 
-    // 5. Update Analytics: Increment clicks and record visit history
+    // 5. Update Analytics: Increment general clicks and record visit history
     await Analytics.findOneAndUpdate(
       { urlId: url._id },
       {
@@ -187,15 +190,16 @@ const getUrlAndTrackAnalytics = async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // 6. If it's a one-time link, deactivate it after access
-    if (url.isOneTime) {
+    // 6. If it's a one-time link without revenue mode, deactivate immediately
+    if (url.isOneTime && !url.enableRevenue) {
       url.isActive = false;
       await url.save();
     }
 
-    // 7. Return the original URL for redirection
+    // 7. Return destination URL and whether revenue/ad interstitial is enabled
     res.status(200).json({
       originalUrl: url.originalUrl,
+      enableRevenue: Boolean(url.enableRevenue),
     });
   } catch (error) {
     console.error("Error retrieving URL and updating analytics:", error);
@@ -203,7 +207,47 @@ const getUrlAndTrackAnalytics = async (req, res) => {
   }
 };
 
+// Track Monetized Click (called ONLY when user completes countdown and clicks the final continue button)
+const trackMonetizedClick = async (req, res) => {
+  try {
+    const { shortCode } = req.params;
+
+    const url = await Url.findOne({ shortCode });
+    if (!url) {
+      return res.status(404).json({ message: "Short link not found" });
+    }
+
+    // Only count as monetized click if revenue is actually enabled
+    if (url.enableRevenue) {
+      await Analytics.findOneAndUpdate(
+        { urlId: url._id },
+        { $inc: { monetizedClicks: 1 } },
+        { upsert: true }
+      );
+
+      // Add $0.01 earnings to the creator if creator exists
+      if (url.createdBy) {
+        await User.findByIdAndUpdate(url.createdBy, {
+          $inc: { earnings: 0.01 },
+        });
+      }
+    }
+
+    // If it's a one-time link with revenue, deactivate now after completion
+    if (url.isOneTime) {
+      url.isActive = false;
+      await url.save();
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Error recording monetized click:", error);
+    res.status(500).json({ message: "Server error recording monetized click" });
+  }
+};
+
 module.exports = {
   createShortUrl,
   getUrlAndTrackAnalytics,
+  trackMonetizedClick,
 };

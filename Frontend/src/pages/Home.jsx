@@ -8,6 +8,7 @@ function Home() {
   const [expiresAt, setExpiresAt] = useState("");
   const [isOneTime, setIsOneTime] = useState(false);
   const [password, setPassword] = useState("");
+  const [enableRevenue, setEnableRevenue] = useState(false);
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,7 @@ function Home() {
           expiresAt: expiresAt || undefined,
           isOneTime,
           password: password || undefined,
+          enableRevenue,
         }),
       });
 
@@ -133,6 +135,20 @@ function Home() {
             </label>
           </div>
 
+          {/* Revenue Model Checkbox */}
+          <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
+            <input
+              id="enableRevenue"
+              type="checkbox"
+              style={{ width: "auto", cursor: "pointer" }}
+              checked={enableRevenue}
+              onChange={(e) => setEnableRevenue(e.target.checked)}
+            />
+            <label htmlFor="enableRevenue" style={{ margin: 0, cursor: "pointer", color: "#28a745", fontWeight: "bold" }}>
+              Enable Revenue (Monetize link with 10s ad interstitial)
+            </label>
+          </div>
+
           {/* Submit Button */}
           <button type="submit" className="btn-primary" disabled={loading} style={{ marginTop: "15px" }}>
             {loading ? "Generating..." : "Generate Short Link"}
@@ -167,8 +183,12 @@ function Home() {
             </div>
           )}
 
-          <div style={{ marginBottom: "12px", fontSize: "14px" }}>
+          <div style={{ marginBottom: "8px", fontSize: "14px" }}>
             <strong>One-Time Use: </strong> {result.url.isOneTime ? "Yes" : "No"}
+          </div>
+
+          <div style={{ marginBottom: "12px", fontSize: "14px" }}>
+            <strong>Revenue Mode: </strong> {result.url.enableRevenue ? "Enabled (Monetized)" : "Disabled"}
           </div>
 
           {result.url.qrCode && (
