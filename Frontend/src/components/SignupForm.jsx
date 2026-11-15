@@ -38,6 +38,14 @@ function SignupForm() {
 
       setMessage("Account created successfully! Redirecting to login...");
 
+      // Store token/user if returned
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
       setTimeout(() => {
         navigate("/login");
       }, 1500);

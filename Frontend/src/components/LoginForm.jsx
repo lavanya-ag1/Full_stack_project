@@ -34,7 +34,12 @@ function LoginForm() {
         throw new Error(data.message || "Invalid credentials");
       }
 
-      // Navigate to home page (JWT token is stored safely in HTTP-only cookie)
+      // Save user profile details in localStorage (JWT is stored safely in HTTP-only cookie)
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      // Navigate to home page
       navigate("/home");
     } catch (err) {
       setError(err.message);
