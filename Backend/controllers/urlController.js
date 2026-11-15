@@ -231,8 +231,89 @@ const trackMonetizedClick = async (req, res) => {
   }
 };
 
+// 4. Fetch all links created by the current user with analytics
+const getUserLinks = async (req, res) => {
+  try {
+    const token = req.cookies?.token || req.headers?.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(200).json({ links: [] });
+    }
+
+    let userId = null;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "mysecretkey");
+      userId = decoded.id;
+    } catch (err) {
+      return res.status(200).json({ links: [] });
+    }
+
+    // Fetch user's links
+    const urls = await Url.find({ createdBy: userId }).sort({ createdAt: -1 }).lean();
+
+    if (urls.length === 0) {
+      return res.status(200).json({ links: [] });
+    }
+
+    // Fetch analytics for these URLs
+    const urlIds = urls.map((u) => u._id);
+    const analyticsList = await Analytics.find({ urlId: { $in: urlIds } }).lean();
+
+    const analyticsMap = {};
+    analyticsList.forEach((item) => {
+      analyticsMap[item.urlId.toString()] = item;
+    });
+
+    const frontendUrl = process.env.FRONTEND
+      ? process.env.FRONTEND.replace(/\/$/, "")
+      : "http://localhost:5173";
+
+    const linksWithStats = urls.map((link) => ({
+      ...link,
+      shortUrl: `${frontendUrl}/${link.shortCode}`,
+      analytics: {
+        clicks: analyticsMap[link._id.toString()]?.clicks || 0,
+        monetizedClicks: analyticsMap[link._id.toString()]?.monetizedClicks || 0,
+      },
+    }));
+
+    res.status(200).json({ links: linksWithStats });
+  } catch (error) {
+    console.error("Error fetching user links:", error);
+    res.status(500).json({ message: "Server error fetching user links" });
+  }
+};
+
+// 5. Delete a short link
+const deleteUserLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const token = req.cookies?.token || req.headers?.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "mysecretkey");
+
+    const link = await Url.findOne({ _id: id, createdBy: decoded.id });
+    if (!link) {
+      return res.status(404).json({ message: "Link not found or unauthorized to delete" });
+    }
+
+    await Url.findByIdAndDelete(id);
+    await Analytics.findOneAndDelete({ urlId: id });
+
+    res.status(200).json({ success: true, message: "Link deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting link:", error);
+    res.status(500).json({ message: "Server error deleting link" });
+  }
+};
+
 module.exports = {
   createShortUrl,
   getUrlAndTrackAnalytics,
   trackMonetizedClick,
+  getUserLinks,
+  deleteUserLink,
 };

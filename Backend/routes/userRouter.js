@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
+const authMiddleware = require("../middleware/authMiddleware");
 const {
   signup,
   login,
+  getMe,
   googleCallback,
   logout,
 } = require("../controllers/userController");
@@ -12,6 +14,9 @@ const {
 router.post("/signup", signup);
 router.post("/login", login);
 router.post("/logout", logout);
+
+// Get current logged-in user profile from HTTP-only cookie
+router.get("/me", authMiddleware, getMe);
 
 // Google OAuth login route (initiates authentication)
 router.get(

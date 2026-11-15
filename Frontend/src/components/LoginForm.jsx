@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,12 +34,7 @@ function LoginForm() {
         throw new Error(data.message || "Invalid credentials");
       }
 
-      // Save user profile details in localStorage (JWT is stored safely in HTTP-only cookie)
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-
-      // Navigate to home page
+      // Navigate to home page (JWT token is stored safely in HTTP-only cookie)
       navigate("/home");
     } catch (err) {
       setError(err.message);
@@ -48,76 +44,78 @@ function LoginForm() {
   };
 
   return (
-    <div className="auth-card">
-      <h2>Login</h2>
+    <div className="login-card">
+      <h2 className="login-title">Login to Linktree</h2>
 
-      {error && <p style={{ color: "red", marginBottom: "15px", fontSize: "14px" }}>{error}</p>}
+      {error && <div className="login-error-badge">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
+        {/* Email Field */}
+        <div className="form-field">
+          <label htmlFor="email">E-Mail Address</label>
           <input
             id="email"
             type="email"
-            placeholder="Enter your email"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
 
-        <div className="form-group">
+        {/* Password Field */}
+        <div className="form-field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
-            placeholder="Enter your password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
 
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "Signing in..." : "Sign In"}
+        {/* Remember Me Checkbox */}
+        <div className="remember-row">
+          <label className="checkbox-container">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <span className="checkbox-label">Remember Me</span>
+          </label>
+        </div>
+
+        {/* Login Submit Button */}
+        <button type="submit" className="login-submit-btn" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
         </button>
       </form>
 
       {/* Google OAuth Option */}
-      <div style={{ textAlign: "center", margin: "15px 0", color: "#888", fontSize: "14px" }}>
-        or
+      <div className="auth-divider">
+        <span>or</span>
       </div>
 
-      <a href={`${backendUrl}/api/user/google`} style={{ textDecoration: "none" }}>
-        <button
-          type="button"
-          style={{
-            width: "100%",
-            padding: "10px",
-            backgroundColor: "#ffffff",
-            color: "#444",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            fontSize: "14px",
-            fontWeight: "500",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-          }}
-        >
-          <img
-            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-            alt="Google"
-            style={{ width: "18px", height: "18px" }}
-          />
-          Continue with Google
-        </button>
+      <a href={`${backendUrl}/api/user/google`} className="google-login-btn">
+        <img
+          src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+          alt="Google logo"
+          className="google-icon"
+        />
+        <span>Continue with Google</span>
       </a>
 
-      <div className="auth-footer" style={{ marginTop: "15px" }}>
-        Don't have an account? <Link to="/signup">Sign up here</Link>
+      {/* Footer Links */}
+      <div className="login-links">
+        <a href="#forgot" onClick={(e) => { e.preventDefault(); alert("Please contact support or register a new account."); }} className="forgot-password-link">
+          Forgot Your Password?
+        </a>
+        <p className="signup-prompt">
+          Don't have an account? <Link to="/signup" className="signup-link">Sign up here.</Link>
+        </p>
       </div>
     </div>
   );

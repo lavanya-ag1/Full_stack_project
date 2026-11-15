@@ -38,14 +38,6 @@ function SignupForm() {
 
       setMessage("Account created successfully! Redirecting to login...");
 
-      // Store token/user if returned
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-
       setTimeout(() => {
         navigate("/login");
       }, 1500);
@@ -57,89 +49,77 @@ function SignupForm() {
   };
 
   return (
-    <div className="auth-card">
-      <h2>Sign Up</h2>
+    <div className="login-card">
+      <h2 className="login-title">Sign Up for Linktree</h2>
 
-      {error && <p style={{ color: "red", marginBottom: "15px", fontSize: "14px" }}>{error}</p>}
-      {message && <p style={{ color: "green", marginBottom: "15px", fontSize: "14px" }}>{message}</p>}
+      {error && <div className="login-error-badge">{error}</div>}
+      {message && <div className="login-success-badge">{message}</div>}
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
+        {/* Name Field */}
+        <div className="form-field">
           <label htmlFor="name">Full Name</label>
           <input
             id="name"
             type="text"
-            placeholder="Enter your name"
+            placeholder="Your Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
           />
         </div>
 
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
+        {/* Email Field */}
+        <div className="form-field">
+          <label htmlFor="email">E-Mail Address</label>
           <input
             id="email"
             type="email"
-            placeholder="Enter your email"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
 
-        <div className="form-group">
+        {/* Password Field */}
+        <div className="form-field">
           <label htmlFor="password">Password</label>
           <input
             id="password"
             type="password"
-            placeholder="Create a password"
+            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
 
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "Creating Account..." : "Sign Up"}
+        {/* Submit Button */}
+        <button type="submit" className="login-submit-btn" disabled={loading} style={{ marginTop: "10px" }}>
+          {loading ? "Creating Account..." : "Create Account"}
         </button>
       </form>
 
       {/* Google OAuth Option */}
-      <div style={{ textAlign: "center", margin: "15px 0", color: "#888", fontSize: "14px" }}>
-        or
+      <div className="auth-divider">
+        <span>or</span>
       </div>
 
-      <a href={`${backendUrl}/api/user/google`} style={{ textDecoration: "none" }}>
-        <button
-          type="button"
-          style={{
-            width: "100%",
-            padding: "10px",
-            backgroundColor: "#ffffff",
-            color: "#444",
-            border: "1px solid #ccc",
-            borderRadius: "4px",
-            fontSize: "14px",
-            fontWeight: "500",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-          }}
-        >
-          <img
-            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-            alt="Google"
-            style={{ width: "18px", height: "18px" }}
-          />
-          Continue with Google
-        </button>
+      <a href={`${backendUrl}/api/user/google`} className="google-login-btn">
+        <img
+          src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+          alt="Google logo"
+          className="google-icon"
+        />
+        <span>Continue with Google</span>
       </a>
 
-      <div className="auth-footer" style={{ marginTop: "15px" }}>
-        Already have an account? <Link to="/login">Login here</Link>
+      {/* Footer Links */}
+      <div className="login-links">
+        <p className="signup-prompt">
+          Already have an account? <Link to="/login" className="signup-link">Log in here.</Link>
+        </p>
       </div>
     </div>
   );

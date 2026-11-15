@@ -97,6 +97,20 @@ const login = async (req, res) => {
   }
 };
 
+// Get Current Logged-in User Profile
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("Get user profile error:", error);
+    res.status(500).json({ message: "Server error fetching user profile" });
+  }
+};
+
 // Google OAuth Callback Handler
 const googleCallback = (req, res) => {
   try {
@@ -133,6 +147,7 @@ const logout = (req, res) => {
 module.exports = {
   signup,
   login,
+  getMe,
   googleCallback,
   logout,
 };
